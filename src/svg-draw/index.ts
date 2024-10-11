@@ -16,12 +16,13 @@ import type { Shape, DrawOptions, Node, VideoPlate, AssetsType } from "./type";
 import DotConfirmInput from "./components/dot-confirm-input.vue";
 import ConfirmInput from "./components/confirm-input.vue";
 import TextInput from "./components/text-input.vue";
+import { removeMentionModals } from "@/rich-editor/utils";
 
 function getUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      var r = Math.random() * 16 | 0,
-          v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
   });
 }
 
@@ -162,6 +163,8 @@ class SvgDraw {
 
   addDrawClickEvent() {
     this.draw.click((e: any) => {
+      // 移除所有批注@弹窗
+      removeMentionModals();
       if (!this.shape) return;
 
       // 圆点批注/文本批注
@@ -537,6 +540,9 @@ class SvgDraw {
 
           this.deleteNodeAndElementByKeys(keyList as string[]);
         }
+
+        // 移除所有批注@弹窗
+        removeMentionModals();
       });
 
       // 输入框确定事件
@@ -575,8 +581,8 @@ class SvgDraw {
             data: dataValue,
           });
 
-          console.log('node', node);
-          
+          console.log("node", node);
+
           vmVal?.component?.exposed?.updateNodeData(node);
           vmVal?.component?.exposed?.updateDisabled(true);
         }
@@ -713,6 +719,9 @@ class SvgDraw {
 
     this.nodeData = [];
     this.elementData = [];
+
+    // 移除所有批注@弹窗
+    removeMentionModals();
   }
 
   sleep(time = 10) {

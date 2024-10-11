@@ -42,18 +42,7 @@
                   {{ item.data.createTime }}
                 </span>
               </div>
-              <a-textarea
-                v-model:value="item.data.html"
-                class="w-100% p-0 user-input"
-                :auto-size="{
-                  minRows: 1,
-                  maxRows: maxRows,
-                }"
-                :bordered="false"
-                disabled
-                :maxlength="50"
-                placeholder=""
-              />
+              <RichEditor v-model="item.data.html" disabled />
             </div>
           </div>
         </div>
@@ -67,6 +56,7 @@
 import type { PropType, StyleValue } from "vue";
 import { annotationsTooltipConfig } from "../config";
 import type { Node } from "../type";
+import RichEditor from "@/rich-editor/index.vue";
 
 const props = defineProps({
   nodeData: {
@@ -180,9 +170,7 @@ const annotationsTooltipStyle: StyleValue = {
   }
 }
 
-.user-input {
-  &::-webkit-scrollbar {
-    display: none;
-  }
+.annotations-tooltip .w-e-text-container .w-e-scroll {
+  max-height: calc(24 * 6px)
 }
 </style>

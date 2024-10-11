@@ -19,18 +19,11 @@
     </template>
 
     <div v-else class="input-wrap pt-4px pr-2px" :style="inputWrapStyle">
-      <a-textarea
-        v-model:value="inputValue"
-        class="w-100% user-input"
-        :auto-size="{
-          minRows: 2,
-          maxRows: 6,
-        }"
-        :bordered="false"
-        :maxlength="50"
-        placeholder="请输入批注内容"
-      >
-      </a-textarea>
+      <RichEditor
+        ref="editorRef"
+        v-model="inputValue"
+        placeholder="请输入批注内容,支持@"
+      />
       <div class="btn-wrap">
         <span class="cancel" @click="handleCancel">取消</span>
         <span class="confirm" @click="handleConfirm">发送</span>
@@ -47,6 +40,8 @@ import dayjs from "dayjs";
 import AnnotationsTooltip from "./annotations-tooltip.vue";
 import { confirmInputConfig } from "../config";
 import type { Node, Placement } from "../type";
+import RichEditor from "@/rich-editor/index.vue";
+import { lineHeight } from "@/rich-editor/config";
 
 const props = defineProps({
   element: {
@@ -95,16 +90,17 @@ const radiusMap = {
   bottomLeft: "0px 50% 50% 50%",
   bottomRight: "50% 0px 50% 50%",
   insideTopLeft: "0px 50% 50% 50%",
-}
- 
+};
+
 watch(
   [() => props.placement, contentDisabled],
   ([placement, disabled]) => {
     if (disabled) {
-      props.element.node.style.borderRadius = radiusMap[placement]
-      props.element.node.style.boxShadow = "0px 0px 5px 5px rgba(0,0,0,0.12)"
+      props.element.node.style.borderRadius = radiusMap[placement];
+      props.element.node.style.boxShadow = "0px 0px 5px 5px rgba(0,0,0,0.12)";
     } else {
-      props.element.node.style.boxShadow = "0px 9px 28px 8px rgba(0,0,0,0.05), 0px 6px 16px 0px rgba(0,0,0,0.08), 0px 3px 6px -4px rgba(0,0,0,0.12)"
+      props.element.node.style.boxShadow =
+        "0px 9px 28px 8px rgba(0,0,0,0.05), 0px 6px 16px 0px rgba(0,0,0,0.08), 0px 3px 6px -4px rgba(0,0,0,0.12)";
     }
   },
   {
@@ -166,8 +162,11 @@ function handleCancel() {
 }
 const headImage =
   "https://img1.baidu.com/it/u=2988791768,3486679626&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=1200";
+const editorRef = shallowRef();
 function handleConfirm() {
-  if (!inputValue.value?.trim()) {
+  const editorData = editorRef.value.getEditorData();
+
+  if (!editorData.text.trim() && !editorData.mentions.length) {
     message.warning("批注内容不能为空");
     return;
   }
@@ -176,6 +175,7 @@ function handleConfirm() {
     headImage,
     nikeName: "",
     html: inputValue.value,
+    ...editorData,
     createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
   };
   props.element.fire("confirm", {
@@ -222,6 +222,7 @@ defineExpose({
     0px 6px 16px 0px rgba(0, 0, 0, 0.08), 0px 3px 6px -4px rgba(0, 0, 0, 0.12);
   border-radius: 8px;
   box-sizing: border-box;
+  overflow: hidden;
 
   .btn-wrap {
     display: flex;
@@ -273,9 +274,7 @@ defineExpose({
   }
 }
 
-.user-input {
-  &::-webkit-scrollbar {
-    display: none;
-  }
+:deep(.w-e-text-container .w-e-scroll) {
+  max-height: v-bind("lineHeight * 6 +'px'");
 }
 </style>

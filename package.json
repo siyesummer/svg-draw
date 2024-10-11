@@ -11,9 +11,12 @@
   "dependencies": {
     "@svgdotjs/svg.js": "^3.2.4",
     "@vueuse/core": "^10.11.0",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "ant-design-vue": "4.x",
     "dayjs": "^1.11.12",
     "lodash-es": "^4.17.21",
+    "snabbdom": "^3.6.2",
     "vue": "^3.4.31"
   },
   "devDependencies": {
