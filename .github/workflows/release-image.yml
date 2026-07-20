@@ -1,0 +1,131 @@
+name: Release svg-draw image
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version increment type
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: svg-draw-image-release
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: siyesummer/svg-draw
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify source build
+        run: npm run build
+
+      - name: Calculate next version
+        id: version
+        env:
+          BUMP_TYPE: ${{ inputs.bump }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest="$(git tag --list 'svg-draw-v*' --sort=-version:refname | head -n 1)"
+          if [ -z "$latest" ]; then
+            current="0.0.0"
+          else
+            current="${latest#svg-draw-v}"
+          fi
+
+          IFS='.' read -r major minor patch <<< "$current"
+          case "${BUMP_TYPE:-patch}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "Unsupported bump type: ${BUMP_TYPE:-patch}" >&2; exit 1 ;;
+          esac
+
+          version="${major}.${minor}.${patch}"
+          tag="svg-draw-v${version}"
+          if git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $tag" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.version }}
+            APP_REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: siyesummer/svg-draw
+          short-description: svg-draw static annotation tool served by Nginx
+          readme-filepath: ./deploy/README.md
+
+      - name: Create Git tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "svg-draw image $VERSION" \
+            --generate-notes
+

@@ -1,0 +1,11 @@
+.git
+.github
+.vscode
+.agents
+node_modules
+dist
+dist-ssr
+.vite
+*.log
+README.md
+
